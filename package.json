@@ -1,0 +1,62 @@
+{
+  "name": "lele-code-ai",
+  "displayName": "LeleCodeAi",
+  "description": "ai code assistant",
+  "version": "1.0.3",
+  "publisher": "zhugj",
+  "icon": "images/icon.png",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "lele-code-ai.openCodeAi",
+        "title": "LeleCodeAi"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "lele-code-ai",
+          "title": "LeleCodeAi",
+          "icon": "images/icon.png"
+        }
+      ]
+    },
+    "views": {
+      "lele-code-ai": [
+        {
+          "id": "lele-code-ai-sidebar",
+          "name": "LeleCodeAi",
+          "type": "webview"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "build": "vsce package",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "@types/node": "^16.11.7",
+    "@typescript-eslint/eslint-plugin": "^5.42.0",
+    "@typescript-eslint/parser": "^5.42.0",
+    "eslint": "^8.26.0",
+    "typescript": "^4.8.4"
+  }
+} 

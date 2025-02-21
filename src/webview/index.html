@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>代码助手</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/vs2015.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+    <!-- <link rel="stylesheet" href="#{styleUri}""> -->
+    <style>
+        body {
+            margin: 0;
+            padding: 15px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+
+        *,
+        *:before,
+        *:after {
+            box-sizing: inherit;
+        }
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            padding: 10px;
+        }
+
+        .message {
+            margin: 12px 0;
+            padding: 12px 16px;
+            border-radius: 8px;
+            max-width: 85%;
+            word-wrap: break-word;
+            line-height: 1.5;
+            font-size: 14px;
+        }
+
+        .user-message {
+            background: #3a3d41;
+            color: #ffffff;
+            margin-left: auto;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .ai-message {
+            background: #3a3d41;
+            margin-right: auto;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .input-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 15px;
+            background: #1e1e1e;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+        }
+
+        .input-box {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: #3c3c3c;
+            border: 1px solid #3c3c3c;
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        #messageInput {
+            width: 100%;
+            min-height: 44px;
+            max-height: 200px;
+            resize: none;
+            background: #6565658d;
+            color: #cccccc;
+            font-family: inherit;
+            font-size: 14px;
+            line-height: 1.6;
+            outline: none;
+            padding: 8px;
+            border: none;
+        }
+
+        .input-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            padding-top: 4px;
+            border-top: 1px solid #474747;
+            justify-content: space-between;
+        }
+
+        .input-actions-left,
+        .input-actions-right {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .action-button {
+            padding: 6px 12px;
+            background: transparent;
+            color: #ffffff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            opacity: 0.85;
+            transition: all 0.2s;
+        }
+
+        .action-button:hover {
+            background: #1177bb;
+            opacity: 1;
+        }
+
+        .action-button svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+
+        .ai-globe-context {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .preview-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 0 0 5px 0;
+        }
+
+        .image-preview {
+            position: relative;
+            width: 70px;
+            height: 70px;
+            border-radius: 4px;
+            overflow: hidden;
+            background-color: #6565658d;
+        }
+
+        .image-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .remove-image {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 15px;
+            height: 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .remove-image:hover {
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .message img {
+            max-width: 100px;
+            max-height: 100px;
+            border-radius: 4px;
+            margin: 5px 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            object-fit: cover;
+        }
+
+        .message img.expanded {
+            max-width: 100%;
+            max-height: none;
+            object-fit: contain;
+        }
+
+        .loading {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+
+        .loading.active {
+            display: flex;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            border-top: 3px solid #0e639c;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .context-menu {
+            position: absolute;
+            background: #1e1e1e;
+            border: 1px solid #474747;
+            border-radius: 4px;
+            padding: 4px 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            display: none;
+        }
+
+        .context-menu.active {
+            display: block;
+        }
+
+        .context-menu-item {
+            padding: 6px 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #d4d4d4;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        .context-menu-item:hover {
+            background: #2a2d2e;
+        }
+
+        .context-menu-item svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+
+        .context-panel {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #1e1e1e;
+            border: 1px solid #474747;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            padding: 8px;
+            max-height: 400px;
+            overflow-y: visible;
+        }
+
+        .context-panel.active {
+            display: block;
+        }
+
+        .search-box-container {
+            display: flex;
+            align-items: center;
+            border: 1px solid #3c3c3c;
+            border-radius: 4px;
+            overflow: hidden;
+            background: #3c3c3c;
+        }
+
+        .search-box {
+            border: none;
+            padding: 6px 8px;
+            background: transparent;
+            color: #cccccc;
+            flex: 1;
+        }
+
+        .search-box:focus {
+            outline: none;
+        }
+
+        .confirm-button {
+            border: none;
+            background: transparent;
+            padding: 6px 12px;
+            color: #ffffff;
+            cursor: pointer;
+            border-left: 1px solid #3c3c3c;
+        }
+
+        .confirm-button:hover {
+            background-color: #1177bb;
+        }
+
+        .file-section {
+            margin-top: 8px;
+            overflow-y: auto;
+        }
+
+        .file-section-header {
+            padding: 6px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #bbbbbb;
+            opacity: 0.8;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 4px 8px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .file-item:hover {
+            background: #2a2d2e;
+        }
+
+        .file-item.selected {
+            background: #094771;
+            color: #ffffff;
+        }
+
+        .file-item.selected .file-path {
+            color: #ffffff;
+            opacity: 0.7;
+        }
+
+        .file-item-content {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex: 1;
+        }
+
+        .file-name {
+            flex: 1;
+            font-size: 13px;
+        }
+
+        .file-path {
+            color: #cccccc88;
+            font-size: 12px;
+            opacity: 0.8;
+            text-align: right;
+            margin-left: 8px;
+        }
+
+        .file-icon {
+            width: 16px;
+            height: 16px;
+            opacity: 0.8;
+        }
+
+        #addedFiles {
+            margin-bottom: 8px;
+        }
+
+        #addedFiles:empty {
+            display: none;
+        }
+
+        #availableFiles {
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        #availableFiles::-webkit-scrollbar,
+        .context-panel::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #availableFiles::-webkit-scrollbar-track,
+        .context-panel::-webkit-scrollbar-track {
+            background: rgba(121, 121, 121, 0.4);
+            border-radius: 4px;
+        }
+
+        #availableFiles::-webkit-scrollbar-thumb,
+        .context-panel::-webkit-scrollbar-thumb {
+            background: rgba(100, 100, 100, 0.7);
+            border-radius: 4px;
+        }
+
+        #availableFiles::-webkit-scrollbar-thumb:hover,
+        .context-panel::-webkit-scrollbar-thumb:hover {
+            background: rgba(191, 191, 191, 0.4);
+            border-radius: 4px;
+        }
+
+        .selected-files {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .selected-file-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 2px 4px;
+            background: #6565658d;
+            color: #ffffff;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .selected-file-item .remove-file {
+            cursor: pointer;
+            opacity: 0.7;
+        }
+
+        .selected-file-item .remove-file:hover {
+            opacity: 1;
+        }
+
+        /* 图片预览模态框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal img {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .preview-container img {
+            cursor: pointer;
+            transition: transform 0.2s;
+            max-width: 200px;
+        }
+
+        .preview-container img:hover {
+            transform: scale(1.05);
+        }
+
+        .message-text {
+            margin-top: 8px;
+        }
+
+        .image-container {
+            display: none;
+        }
+
+        .images-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .image-wrapper {
+            flex: 0 0 auto;
+            max-width: 300px;
+            max-height: 200px;
+            border-radius: 4px;
+        }
+
+        .image-wrapper img.thumbnail {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            background-color: #6565658d;
+        }
+
+        .image-wrapper img.thumbnail:hover {
+            transform: scale(1.02);
+        }
+
+        /* 代码块容器样式 */
+        pre {
+            position: relative;
+            padding: 1em;
+            border-radius: 6px;
+            background-color: #1e1e1e;
+            margin: 1em 0;
+        }
+
+        /* 复制按钮样式 */
+        .copy-button {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            padding: 4px 8px;
+            font-size: 12px;
+            color: #ffffff;
+            background-color: #1e1e1e;
+            border: 1px solid #cccccc;
+            border-radius: 4px;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s, background-color 0.2s;
+        }
+
+        /* 鼠标悬停时显示复制按钮 */
+        pre:hover .copy-button {
+            opacity: 1;
+        }
+
+        /* 复制按钮悬停效果 */
+        .copy-button:hover {
+            background-color: #2a2a2a;
+        }
+
+        /* 复制成功状态 */
+        .copy-button.copied {
+            background-color: #28a745;
+            border-color: #28a745;
+        }
+
+        /* 代码块样式优化 */
+        code {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        pre code {
+            display: block;
+            overflow-x: auto;
+            padding: 0.5em;
+            color: #abb2bf;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="chat-container">
+        <div class="loading" id="loading">
+            <div class="loading-spinner"></div>
+            <div>正在生成代码...</div>
+        </div>
+        <div class="messages" id="messages">
+            <div class="message ai-message">你好！我是你的代码助手，有什么可以帮你的吗？</div>
+        </div>
+        <div id="selectedContext"></div>
+        <div class="input-container">
+            <div class="input-area">
+                <div class="input-box">
+                    <div class="ai-globe-context" id="aiGlobeContext">
+                        <div class="preview-container" id="previewContainer">
+                            <!-- 这里会动态添加多个图片预览 -->
+                        </div>
+                        <div class="selected-files" id="selectedFiles"></div>
+                    </div>
+                    <textarea id="messageInput" placeholder="输入消息... (可以粘贴图片)" onpaste="handlePaste(event)"></textarea>
+                    <div class="input-actions">
+                        <div class="input-actions-left">
+                            <button class="action-button" onclick="handleImageUpload()">
+                                <svg viewBox="0 0 24 24">
+                                    <path
+                                        d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
+                                </svg>
+                                添加图片
+                            </button>
+                        </div>
+                        <div class="input-actions-right">
+                            <button class="action-button" onclick="handleAddContext()">
+                                <svg viewBox="0 0 16 16" width="16" height="16">
+                                    <path
+                                        d="M14.5 3h-4.79l-.15-.15L8.71 2H3.5l-.5.5v10l.5.5h11l.5-.5v-9l-.5-.5zm-.51 9H4V3h4.29l.15.15L9.29 4H14v8z" />
+                                </svg>
+                                Add Context
+                            </button>
+                            <button class="action-button" onclick="sendMessage()">
+                                <svg viewBox="0 0 16 16" width="16" height="16">
+                                    <path
+                                        d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.5.5 0 0 1-.898.03l-2.777-4.445-4.445-2.777a.5.5 0 0 1 .03-.898L14.546.002a.5.5 0 0 1 .54.11z" />
+                                </svg>
+                                发送
+                            </button>
+                        </div>
+                    </div>
+                    <div class="context-panel" id="contextPanel">
+                        <div class="search-box-container">
+                            <input type="text" class="search-box" placeholder="Search files by name"
+                                onclick="handleSearchClick(event)">
+                            <button class="confirm-button" onclick="handleConfirmSearch()">确认</button>
+                        </div>
+                        <div class="file-section">
+                            <div class="file-section-header">ADDED</div>
+                            <div id="addedFiles"></div>
+                        </div>
+                        <div class="file-section">
+                            <div class="file-section-header">AVAILABLE</div>
+                            <div id="availableFiles"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 添加模态框 -->
+        <div id="imageModal" class="modal" onclick="closeModal()">
+            <img id="modalImage" src="" alt="预览图片">
+        </div>
+    </div>
+</body>
+
+</html>
+<script lang="javascript">
+    // 删除VSCode检测函数和相关变量
+    const vscode = {
+        postMessage: (msg) => {
+            console.log('Browser mode, message:', msg);
+        }
+    };
+
+    const messagesDiv = document.getElementById('messages');
+    const messageInput = document.getElementById('messageInput');
+    const previewContainer = document.getElementById('previewContainer');
+    const loadingElement = document.getElementById('loading');
+    const contextMenu = document.getElementById('imageContextMenu');
+    let currentImage = null;
+    let currentContextImage = null;
+
+    // 保持全局数组
+    let imageDataArray = [];
+    let selectedContextFiles = [];
+    let sessionParams = [];
+
+    // 简化消息处理器
+    const messageHandlers = {
+        receiveMessage: (text, isAI = true, image = null) => {
+            addMessage(text, isAI, image);
+        },
+        showLoading: () => {
+            showLoading();
+        },
+        hideLoading: () => {
+            hideLoading();
+        },
+        fileList: (files) => {
+            window.currentFiles = files;
+            renderFileList(files);
+        },
+        selectedFiles: (files) => {
+            const searchBox = document.querySelector('.search-box');
+            if (files && files.length > 0) {
+                searchBox.value = files.map(f => f.name).join(', ');
+                renderFileList(files);
+            }
+        }
+    };
+
+    function showLoading() {
+        loadingElement.classList.add('active');
+    }
+
+    function hideLoading() {
+        loadingElement.classList.remove('active');
+    }
+
+    function addMessage(text, isAI = false, images = null) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message ' + (isAI ? 'ai-message' : 'user-message');
+
+        // 如果有图片，先添加图片
+        if (images) {
+            const imagesContainer = document.createElement('div');
+            imagesContainer.className = 'images-container';
+
+            // 处理单张图片或多张图片
+            const imageArray = Array.isArray(images) ? images : [images];
+
+            imageArray.forEach(imgSrc => {
+                const imgWrapper = document.createElement('div');
+                imgWrapper.className = 'image-wrapper';
+
+                const img = document.createElement('img');
+                img.src = imgSrc;
+                img.className = 'thumbnail';
+                img.onclick = () => openModal(imgSrc);
+
+                imgWrapper.appendChild(img);
+                imagesContainer.appendChild(imgWrapper);
+            });
+
+            messageDiv.appendChild(imagesContainer);
+        }
+
+        // 如果有文本，添加文本
+        if (text) {
+            const textDiv = document.createElement('div');
+            textDiv.className = 'message-text';
+            if (isAI) {
+                marked.setOptions({
+                    highlight: function (code, lang) {
+                        if (lang && hljs.getLanguage(lang)) {
+                            return hljs.highlight(code, { language: lang }).value;
+                        }
+                        return hljs.highlightAuto(code).value;
+                    }
+                });
+                textDiv.innerHTML = marked.parse(text);
+            } else {
+                textDiv.textContent = text;
+            }
+            messageDiv.appendChild(textDiv);
+        }
+
+        messagesDiv.appendChild(messageDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function handlePaste(event) {
+        const items = event.clipboardData.items;
+        for (const item of items) {
+            if (item.type.indexOf('image') === 0) {
+                const blob = item.getAsFile();
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    addImagePreview(e.target.result);  // 直接传递 base64 字符串
+                };
+                reader.readAsDataURL(blob);
+            }
+        }
+    }
+
+    // 图片预览相关函数
+    function openModal(imgSrc) {
+        const modal = document.getElementById('imageModal');
+        const modalImg = document.getElementById('modalImage');
+        modal.classList.add('show');
+        modalImg.src = imgSrc;
+    }
+
+    function closeModal() {
+        const modal = document.getElementById('imageModal');
+        modal.classList.remove('show');
+    }
+
+    // 修改添加预览图片函数以处理 File 对象和 base64 字符串
+    function addImagePreview(input) {
+        if (input instanceof File) {
+            // 如果输入是 File 对象
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                createImagePreview(e.target.result);
+            };
+            reader.readAsDataURL(input);
+        } else if (typeof input === 'string') {
+            // 如果输入是 base64 字符串
+            createImagePreview(input);
+        }
+    }
+
+    // 新增函数用于创建图片预览
+    function createImagePreview(imgSrc) {
+        const img = document.createElement('img');
+        img.src = imgSrc;
+        img.onclick = () => openModal(imgSrc);
+
+        // 将图片数据添加到数组中
+        imageDataArray.push(imgSrc);
+
+        const previewWrapper = document.createElement('div');
+        previewWrapper.className = 'image-preview';
+
+        const removeButton = document.createElement('button');
+        removeButton.className = 'remove-image';
+        removeButton.innerHTML = '×';
+        removeButton.onclick = function (e) {
+            e.stopPropagation(); // 防止触发图片的点击事件
+            // 从数组中移除图片数据
+            const index = imageDataArray.indexOf(imgSrc);
+            if (index > -1) {
+                imageDataArray.splice(index, 1);
+            }
+            previewWrapper.remove();
+        };
+
+        previewWrapper.appendChild(img);
+        previewWrapper.appendChild(removeButton);
+        document.getElementById('previewContainer').appendChild(previewWrapper);
+    }
+
+    function handleImageUpload() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.multiple = true;
+
+        input.onchange = function (e) {
+            const files = e.target.files;
+            for (const file of files) {
+                addImagePreview(file);  // 传递 File 对象
+            }
+        };
+
+        input.click();
+    }
+
+    async function sendMessage() {
+        const text = messageInput.value.trim();
+        const images = imageDataArray;
+
+        // 如果既没有文本也没有图片，则不发送
+        if (!text && images.length === 0) {
+            return;
+        }
+
+        // 构建消息内容数组
+        const content = [];
+
+        // 如果有文本，添加文本内容
+        if (text) {
+            content.push({
+                type: "text",
+                text: text
+            });
+        }
+
+        // 如果有图片，添加图片内容
+        if (images && images.length > 0) {
+            images.forEach(imgSrc => {
+                content.push({
+                    type: "image_url",
+                    image_url: {
+                        url: imgSrc
+                    }
+                });
+            });
+        }
+
+        // 构建完整的消息对象
+        const messageData = {
+            role: "user",
+            content: content
+        };
+
+        sessionParams.push(messageData);
+
+        // 添加用户消息到聊天界面
+        addMessage(text, false, images);
+
+        // 清空输入框和图片预览
+        messageInput.value = '';
+        const previewContainer = document.getElementById('previewContainer');
+        previewContainer.innerHTML = '';
+        imageDataArray = [];
+
+        try {
+            const response = await callAPI();
+            sessionParams.push({
+                role: 'assistant',
+                content: response,
+                timestamp: new Date().toISOString()
+            });
+        } catch (error) {
+            console.error('发送消息错误:', error);
+        }
+    }
+
+    function handleAddContext() {
+        const panel = document.getElementById('contextPanel');
+        panel.classList.add('active');
+        handleSearchClick(new Event('click'));
+    }
+
+    function handleSearchClick(event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.webkitdirectory = true;
+        input.directory = true;
+        input.style.display = 'none';
+        document.body.appendChild(input);
+
+        input.onchange = (e) => {
+            const files = [];
+            const processedPaths = new Set();
+
+            Array.from(e.target.files).forEach(file => {
+                const fullPath = file.webkitRelativePath;
+                const pathParts = fullPath.split('/');
+
+                for (let i = 1; i <= pathParts.length; i++) {
+                    const currentPath = pathParts.slice(0, i).join('/');
+
+                    if (!processedPaths.has(currentPath)) {
+                        processedPaths.add(currentPath);
+
+                        if (i === pathParts.length) {
+                            files.push({
+                                name: pathParts[i - 1],
+                                path: currentPath,
+                                type: pathParts[i - 1].split('.').pop() || 'unknown',
+                                selected: false
+                            });
+                        } else {
+                            files.push({
+                                name: pathParts[i - 1],
+                                path: currentPath,
+                                type: 'directory',
+                                selected: false
+                            });
+                        }
+                    }
+                }
+            });
+
+            files.sort((a, b) => a.path.localeCompare(b.path));
+            messageHandlers.fileList(files);
+            document.body.removeChild(input);
+        };
+
+        input.click();
+    }
+
+    function createFileItem(file, isSelected) {
+        const fileItem = document.createElement('div');
+        fileItem.className = `file-item${isSelected ? ' selected' : ''}`;
+
+        const iconPath = file.type === 'directory'
+            ? 'M1.5 14h13l.5-.5V3.707L13.293 2H8.5l-.354-.146L7.793 1H2.5l-.5.5v12l-.5.5z'
+            : 'M13.5 3H7.5L6.5 2h-4l-.5.5v11l.5.5h11l.5-.5v-10L13.5 3zM13 13H3V3h3.5l1 1h5.5v9z';
+
+        fileItem.innerHTML = `
+        <div class="file-item-content">
+            <svg class="file-icon" viewBox="0 0 16 16">
+                <path d="${iconPath}"/>
+            </svg>
+            <span class="file-name">${file.name}</span>
+            <span class="file-path">${file.path}</span>
+        </div>
+    `;
+
+        if (!isSelected) {
+            fileItem.onclick = () => selectFile(file);
+        }
+
+        return fileItem;
+    }
+
+    function selectFile(file) {
+        file.selected = !file.selected;
+
+        const allFiles = window.currentFiles || [];
+        const fileIndex = allFiles.findIndex(f => f.path === file.path);
+        if (fileIndex !== -1) {
+            allFiles[fileIndex].selected = file.selected;
+        }
+        window.currentFiles = allFiles;
+
+        renderFileList(allFiles);
+    }
+
+    function renderFileList(files = []) {
+        const addedFiles = document.getElementById('addedFiles');
+        const availableFiles = document.getElementById('availableFiles');
+
+        addedFiles.innerHTML = '';
+        availableFiles.innerHTML = '';
+
+        if (!files || files.length === 0) {
+            availableFiles.innerHTML = `
+                <div class="file-item">
+                    <div class="file-item-content">
+                        <svg class="file-icon" viewBox="0 0 16 16">
+                            <path d="M1.5 14h13l.5-.5V3.707L13.293 2H8.5l-.354-.146L7.793 1H2.5l-.5.5v12l-.5.5z"/>
+                        </svg>
+                        <span class="file-name">选择文件夹...</span>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        const selectedFiles = files.filter(f => f.selected);
+        if (selectedFiles.length > 0) {
+            selectedFiles.forEach(file => {
+                const fileItem = createFileItem(file, true);
+                fileItem.onclick = () => selectFile(file);
+                addedFiles.appendChild(fileItem);
+            });
+        }
+
+        const availableFilesList = files.filter(f => !f.selected);
+        availableFilesList.forEach(file => {
+            const fileItem = createFileItem(file, false);
+            fileItem.onclick = () => selectFile(file);
+            availableFiles.appendChild(fileItem);
+        });
+
+        updateSearchBoxDisplay(selectedFiles);
+    }
+
+    function updateSearchBoxDisplay(selectedFiles) {
+        const searchBox = document.querySelector('.search-box');
+        if (selectedFiles && selectedFiles.length > 0) {
+            searchBox.value = selectedFiles.map(f => f.name).join(', ');
+        } else {
+            searchBox.value = '';
+            searchBox.placeholder = 'Search files by name';
+        }
+    }
+
+    function handleConfirmSearch() {
+        const selectedFiles = window.currentFiles ? window.currentFiles.filter(f => f.selected) : [];
+        const selectedFilesContainer = document.getElementById('selectedFiles');
+
+        // 清空现有的显示
+        selectedFilesContainer.innerHTML = '';
+
+        // 更新全局存储
+        selectedContextFiles = selectedFiles;
+
+        selectedFiles.forEach(file => {
+            // 创建选中文件标签
+            const fileTag = document.createElement('div');
+            fileTag.className = 'selected-file-item';
+            fileTag.innerHTML = `
+                <span>${file.name}</span>
+                <span class="remove-file" onclick="removeSelectedFile(this, '${file.path}')">×</span>
+            `;
+            fileTag.dataset.path = file.path;
+
+            selectedFilesContainer.appendChild(fileTag);
+        });
+
+        // 关闭上下文面板
+        document.getElementById('contextPanel').classList.remove('active');
+    }
+
+    function removeSelectedFile(element, filePath) {
+        // 从全局存储中移除文件
+        const fileIndex = selectedContextFiles.findIndex(f => f.path === filePath);
+        if (fileIndex > -1) {
+            selectedContextFiles.splice(fileIndex, 1);
+        }
+
+        // 更新 currentFiles 中的选中状态
+        const currentFileIndex = window.currentFiles.findIndex(f => f.path === filePath);
+        if (currentFileIndex > -1) {
+            window.currentFiles[currentFileIndex].selected = false;
+        }
+
+        // 移除选中的文件标签
+        element.parentElement.remove();
+
+        // 如果在 VSCode 环境中，通知更新
+        if (isInVSCode()) {
+            vscode.postMessage({
+                command: 'selectFile',
+                files: selectedContextFiles
+            });
+        }
+    }
+
+    // 初始化
+    document.addEventListener('DOMContentLoaded', () => {
+        // 初始化搜索框
+        const searchBox = document.querySelector('.search-box');
+        searchBox.removeAttribute('readonly');
+
+        // 监听消息
+        window.addEventListener('message', event => {
+            const message = event.data;
+            const handler = messageHandlers[message.command];
+            if (handler) {
+                handler(message.text, message.isAI, message.image);
+            }
+        });
+
+        // 监听回车发送消息
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    });
+
+    // 添加创建消息元素的辅助函数
+    function createMessageElement(role) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${role === 'assistant' ? 'ai-message' : 'user-message'}`;
+
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'message-text';
+        messageDiv.appendChild(contentDiv);
+
+        return messageDiv;
+    }
+
+    // 添加复制代码的函数
+    function copyCode(button) {
+        const codeBlock = button.parentElement.querySelector('code');
+        const text = codeBlock.textContent;
+
+        navigator.clipboard.writeText(text).then(() => {
+            // 更新复制按钮文本
+            const originalText = button.textContent;
+            button.textContent = '已复制!';
+            button.classList.add('copied');
+
+            // 2秒后恢复原始文本
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.classList.remove('copied');
+            }, 2000);
+        }).catch(err => {
+            console.error('复制失败:', err);
+        });
+    }
+
+    // 修改代码高亮处理部分
+    function addCopyButtonToCodeBlock(codeBlock) {
+        const pre = codeBlock.parentElement;
+        if (!pre.querySelector('.copy-button')) {
+            const button = document.createElement('button');
+            button.className = 'copy-button';
+            button.textContent = '复制';
+            button.onclick = function () {
+                copyCode(this);
+            };
+            pre.appendChild(button);
+        }
+    }
+
+    async function callAPI() {
+        try {
+            // 构建请求参数对象
+            const requestBody = {
+                model: "bot-20250213153935-2x2qt",
+                stream: true,
+                stream_options: { include_usage: true },
+                messages: sessionParams
+            };
+
+            // 计算请求参数大小
+            const requestSize = new TextEncoder().encode(JSON.stringify(requestBody)).length;
+            console.log('API请求参数大小:', (requestSize / 1024).toFixed(2), 'KB');
+
+            // 调用API
+            const response = await fetch('https://demo-rtcai.ledupeiyou.com/proxyAIGCFetch/chat', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer 4044c019-018b-4973-8ec3-34295dc2b885',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            });
+            // 检查API请求是否成功
+            if (!response.ok) {
+                throw new Error('API 请求失败');
+            }
+            // 创建一个新的回复消息容器
+            const messageDiv = createMessageElement('assistant');
+            // 将消息添加到消息列表中
+            messagesDiv.appendChild(messageDiv);
+            // 获取消息文本容器
+            const contentDiv = messageDiv.querySelector('.message-text');
+            // 使用 TextDecoder 来解码流
+            const decoder = new TextDecoder();
+            // 获取流读取器
+            const reader = response.body.getReader();
+            // 用于存储未完成的数据
+            let buffer = '';
+            // 用于存储完整的响应
+            let fullResponse = '';
+            // 无限循环直到流结束
+            while (true) {
+                // 读取下一个数据块
+                const { done, value } = await reader.read();
+                // 如果流结束，退出循环
+                if (done) break;    
+                // 解码新的数据块并添加到缓冲
+                buffer += decoder.decode(value, { stream: true });
+                // 按行分割并处理每一行
+                const lines = buffer.split('\n');
+                // 保留最后一行（可能不完整）
+                buffer = lines.pop() || '';
+                // 遍历每一行
+                for (const line of lines) {
+                    // 如果行是空字符串，跳过
+                    if (line.trim() === '') continue;
+                    // 移除 'data:' 前缀
+                    try {
+                        // 移除 'data:' 前缀
+                        const jsonStr = line.replace(/^data:/, '').trim();
+                        // 如果行是空字符串，跳过
+                        if (!jsonStr) continue;
+                        // 解析JSON数据
+                        const jsonData = JSON.parse(jsonStr);
+                        // 如果数据块包含内容，更新响应
+                        if (jsonData.choices && jsonData.choices[0].delta.content) {
+                            // 获取内容
+                            const content = jsonData.choices[0].delta.content;
+                            // 添加到完整响应
+                            fullResponse += content;
+                            // 实时更新UI
+                            contentDiv.innerHTML = marked.parse(fullResponse);
+                            // 如果有代码块，应用语法高亮
+                            const codeBlocks = contentDiv.querySelectorAll('pre code');
+                            // 如果代码块存在，应用语法高亮
+                            if (codeBlocks.length > 0) {
+                                // 遍历每个代码块
+                                codeBlocks.forEach(block => {
+                                    // 应用语法高亮
+                                    hljs.highlightElement(block);
+                                    // 添加复制按钮
+                                    addCopyButtonToCodeBlock(block);
+                                });
+                            }
+                            // 滚动到底部
+                            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                        }
+                    } catch (e) {
+                        console.warn('解析数据块时出错:', e, line);
+                    }
+                }
+            }
+
+            // 处理缓冲区中剩余的数据   
+            if (buffer.trim()) {
+                try {
+                    // 移除 'data:' 前缀
+                    const jsonStr = buffer.replace(/^data:/, '').trim();
+                    // 如果数据块包含内容，更新响应
+                    if (jsonStr) {
+                        // 解析JSON数据
+                        const jsonData = JSON.parse(jsonStr);
+                        // 如果数据块包含内容，更新响应
+                        if (jsonData.choices && jsonData.choices[0].delta.content) {
+                            // 获取内容
+                            const content = jsonData.choices[0].delta.content;
+                            // 添加到完整响应
+                            fullResponse += content;
+                            // 实时更新UI
+                            contentDiv.innerHTML = marked.parse(fullResponse);
+                            // 处理最后一次的代码高亮
+                            const codeBlocks = contentDiv.querySelectorAll('pre code');
+                            if (codeBlocks.length > 0) {
+                                codeBlocks.forEach(block => {
+                                    hljs.highlightElement(block);
+                                    addCopyButtonToCodeBlock(block);
+                                });
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn('处理最后的数据块时出错:', e);
+                }
+            }
+
+            // 在获取完整响应后，将助理的回复添加到会话参数中
+            sessionParams.push({
+                role: 'assistant',
+                content: fullResponse
+            });
+
+            return fullResponse;
+        } catch (error) {
+            console.error('API调用错误:', error);
+            // 创建一个新的回复消息容器
+            const messageDiv = createMessageElement('assistant');
+            // 将消息添加到消息列表中
+            messagesDiv.appendChild(messageDiv);
+            // 获取消息文本容器
+            const contentDiv = messageDiv.querySelector('.message-text');
+            // 设置消息文本
+            contentDiv.textContent = '抱歉，发生了错误，请稍后重试。';
+            return '抱歉，发生了错误，请稍后重试。';
+        }
+    }
+
+    console.log('Chat webview loaded'); // 这会帮助你在开发者工具中找到你的代码 
+</script>
